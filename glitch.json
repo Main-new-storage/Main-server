@@ -7,12 +7,15 @@
   ],
   "env": {
     "GLITCH_DEPLOYMENT": "true",
-    "PYTHON_VERSION": "3.11.11",
     "DROPBOX_ENABLED": "true",
     "STORAGE_MODE": "dropbox",
     "MEMORY_ONLY_MODE": "true",
     "USE_DROPBOX_STREAMING": "true",
     "PORT": "3000",
-    "GUNICORN_WORKERS": "1"
+    "GUNICORN_WORKERS": "1",
+    "DROPBOX_APP_KEY": "2bi422xpd3xd962",
+    "DROPBOX_APP_SECRET": "j3yx0b41qdvfu86",
+    "DROPBOX_REFRESH_TOKEN": "RvyL03RE5qAAAAAAAAAAAVMVebvE7jDx8Okd0ploMzr85c6txvCRXpJAt30mxrKF",
+    "DROPBOX_AUTO_REFRESH": "true"
   }
 }
