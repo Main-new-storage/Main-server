@@ -1,0 +1,72 @@
+name: Sync Main Server Repository
+
+on:
+  # Run on a schedule (e.g., daily at midnight UTC)
+  schedule:
+    - cron: '0 0 * * *'
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  sync-and-pr:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout the current repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          # Ensure we have full history
+          fetch-depth: 0
+
+      # Set up Git configuration
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Clone the source repository into a temporary directory
+      - name: Clone Source Repository
+        run: |
+          git clone https://github.com/Testing-training-v1/Main-server.git temp-repo
+          # Remove the .git directory to treat it as fresh content
+          rm -rf temp-repo/.git
+
+      # Copy files and create a new branch
+      - name: Create Sync Branch
+        run: |
+          # Create a new branch with timestamp
+          BRANCH_NAME="sync-main-server-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH_NAME"
+          
+          # Remove existing files except .git and workflow files
+          find . -maxdepth 1 -not -name '.' -not -name '..' -not -name '.git' -not -name '.github' -exec rm -rf {} +
+          
+          # Copy all files from the cloned repo
+          cp -r temp-repo/* .
+          
+          # Clean up temporary directory
+          rm -rf temp-repo
+
+      # Commit changes
+      - name: Commit Changes
+        run: |
+          git add .
+          git commit -m "Sync with Testing-training-v1/Main-server" || echo "No changes to commit"
+
+      # Push branch and create PR
+      - name: Create Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+          git push origin "$BRANCH_NAME"
+          
+          # Create PR using GitHub CLI
+          gh pr create \
+            --title "Automated sync from Testing-training-v1/Main-server" \
+            --body "This PR synchronizes the repository with the latest changes from Testing-training-v1/Main-server" \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --label "automated,sync"
+        continue-on-error: true  # Continue even if PR creation fails (e.g., no changes)
