@@ -65,6 +65,7 @@ if DROPBOX_ENABLED:
 IS_RENDER = os.getenv("RENDER", "").lower() in ["true", "1", "yes"]
 IS_KOYEB = os.getenv("KOYEB_DEPLOYMENT", "").lower() in ["true", "1", "yes"]
 IS_CIRCLECI = os.getenv("CIRCLECI", "").lower() in ["true", "1", "yes"] or os.getenv("CIRCLECI_ENV", "").lower() in ["true", "1", "yes"]
+IS_GLITCH = os.getenv("GLITCH_DEPLOYMENT", "").lower() in ["true", "1", "yes"] or os.getenv("PROJECT_DOMAIN", "").endswith(".glitch.me")
 
 # Memory-only mode for cloud deployments
 MEMORY_ONLY_MODE = os.getenv("MEMORY_ONLY_MODE", "False").lower() in ["true", "1", "yes"]
@@ -84,6 +85,13 @@ elif IS_CIRCLECI and not os.environ.get("DISABLE_MEMORY_ONLY_MODE"):
     USE_DROPBOX_STREAMING = True
     NO_LOCAL_STORAGE = True
     logger.info("Memory-only mode automatically enabled for CircleCI environment")
+    
+# If we're running on Glitch, enable memory-only mode by default
+elif IS_GLITCH and not os.environ.get("DISABLE_MEMORY_ONLY_MODE"):
+    MEMORY_ONLY_MODE = True
+    USE_DROPBOX_STREAMING = True
+    NO_LOCAL_STORAGE = True
+    logger.info("Memory-only mode automatically enabled for Glitch deployment")
 
 # Use environment variables if set, otherwise use platform-specific defaults
 DATA_DIR = os.getenv("DATA_DIR", None)

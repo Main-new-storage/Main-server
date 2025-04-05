@@ -3,7 +3,7 @@ set -e
 
 echo "Starting Backdoor AI Learning Server..."
 
-# Operating in memory-only mode with no local storage on Render
+# Operating in memory-only mode with no local storage on cloud platforms
 echo "Setting up memory-only operation mode..."
 
 if [ -n "$RENDER" ]; then
@@ -29,6 +29,15 @@ elif [ -n "$KOYEB_DEPLOYMENT" ]; then
     # Set environment variables to signal memory-only mode
     export MEMORY_ONLY_MODE="True"
     export USE_DROPBOX_STREAMING="True"
+elif [ -n "$GLITCH_DEPLOYMENT" ]; then
+    echo "Running on Glitch.com platform - using memory-only mode"
+    # Set environment variables to signal memory-only mode
+    export MEMORY_ONLY_MODE="True"
+    export NO_LOCAL_STORAGE="True"
+    export USE_DROPBOX_STREAMING="True"
+    
+    # No directories needed - everything will stream from Dropbox
+    echo "No local directories needed - running in pure memory mode for Glitch"
 else
     echo "Running in local/custom environment"
     # In local environment, use directories in current directory
