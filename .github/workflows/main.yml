@@ -28,14 +28,28 @@ jobs:
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'action@github.com'
-          git checkout -b sync-server
+
+          # Check if the sync-server branch exists in the remote repository
+          if git ls-remote --heads origin sync-server | grep -q sync-server; then
+            echo "sync-server branch exists, resetting it..."
+            git fetch origin
+            git checkout sync-server
+            git reset --hard origin/main  # Reset to main branch
+          else
+            echo "sync-server branch does not exist, creating it..."
+            git checkout -b sync-server
+          fi
+
+          # Stage and commit changes
           git add .
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
           git commit -m "Sync changes from main server"
-          git push --set-upstream origin sync-server
+
+          # Force push the changes
+          git push --force --set-upstream origin sync-server
 
       - name: Create Pull Request to main
         uses: peter-evans/create-pull-request@v5
@@ -46,3 +60,4 @@ jobs:
           base: main
           title: "Sync changes from main server"
           body: "This PR syncs changes from the main server repository."
+          delete-branch: true  # Optionally delete the branch after PR merge
