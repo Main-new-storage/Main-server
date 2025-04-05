@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: Main-new-storage/Main-server
           ref: main
@@ -24,20 +24,25 @@ jobs:
         run: |
           cp -r temp-repo/* .
 
-      - name: Commit and push changes
+      - name: Commit and push changes to sync-server branch
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'action@github.com'
           git checkout -b sync-server
           git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
           git commit -m "Sync changes from main server"
           git push --set-upstream origin sync-server
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v3
+      - name: Create Pull Request to main
+        uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Sync changes from main server
           branch: sync-server
+          base: main
           title: "Sync changes from main server"
           body: "This PR syncs changes from the main server repository."
