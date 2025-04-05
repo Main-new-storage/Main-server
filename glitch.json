@@ -1,0 +1,18 @@
+{
+  "install": "python build-packages.py",
+  "start": "bash glitch-start.sh",
+  "watchedFiles": [
+    "requirements.txt",
+    "config.py"
+  ],
+  "env": {
+    "GLITCH_DEPLOYMENT": "true",
+    "PYTHON_VERSION": "3.11.11",
+    "DROPBOX_ENABLED": "true",
+    "STORAGE_MODE": "dropbox",
+    "MEMORY_ONLY_MODE": "true",
+    "USE_DROPBOX_STREAMING": "true",
+    "PORT": "3000",
+    "GUNICORN_WORKERS": "1"
+  }
+}
