@@ -205,10 +205,33 @@ def init_nltk_dropbox_resources(resources: List[str]) -> bool:
         # Create resource provider
         provider = DropboxResourceProvider(dropbox_storage)
         
-        # Register custom finder with NLTK
-        nltk.data.finder._resource_providers.append(provider)
-        
-        logger.info("Registered Dropbox resource provider with NLTK")
+        # Register custom finder with NLTK - safely access resource providers
+        try:
+            # Try to access the private _resource_providers attribute
+            if hasattr(nltk.data, 'finder') and hasattr(nltk.data.finder, '_resource_providers'):
+                nltk.data.finder._resource_providers.append(provider)
+                logger.info("Registered Dropbox resource provider with NLTK")
+            else:
+                # Alternative approach - monkey patch the find function
+                original_find = nltk.data.find
+                
+                def patched_find(resource_name, paths=None):
+                    try:
+                        # First try to find using the provider
+                        result = provider.find(resource_name)
+                        if result:
+                            return result
+                    except Exception as e:
+                        logger.debug(f"Provider find failed: {e}")
+                    
+                    # Fall back to the original find function
+                    return original_find(resource_name, paths)
+                
+                nltk.data.find = patched_find
+                logger.info("Patched NLTK data.find with Dropbox provider")
+        except Exception as e:
+            logger.error(f"Error registering NLTK resource provider: {e}")
+            # Continue anyway as we'll fall back to regular download
         
         # Ensure each resource is available
         for resource in resources:

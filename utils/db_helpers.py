@@ -221,7 +221,9 @@ def init_db(db_path: str) -> None:
                 accuracy REAL,
                 training_data_size INTEGER,
                 training_date TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                is_ensemble BOOLEAN DEFAULT 0,
+                metadata TEXT
             )
         ''')
         
