@@ -11,11 +11,11 @@ import os
 
 def print_info():
     """Print system information for debugging"""
-    print(f"Python version: {platform.python_version()}")
-    print(f"Python implementation: {platform.python_implementation()}")
-    print(f"Platform: {platform.platform()}")
-    print(f"Architecture: {platform.machine()}")
-    print(f"System: {platform.system()}")
+    print("Python version: %s" % platform.python_version())
+    print("Python implementation: %s" % platform.python_implementation())
+    print("Platform: %s" % platform.platform())
+    print("Architecture: %s" % platform.machine())
+    print("System: %s" % platform.system())
 
 def install_packages():
     """Install packages in the correct order with appropriate flags"""
@@ -57,9 +57,9 @@ def verify_packages():
         try:
             module = __import__(package)
             version = getattr(module, "__version__", "unknown")
-            print(f"✅ {package} version: {version}")
+            print("✅ %s version: %s" % (package, version))
         except ImportError:
-            print(f"❌ Failed to import {package}")
+            print("❌ Failed to import %s" % package)
 
 if __name__ == "__main__":
     print_info()
