@@ -24,20 +24,24 @@ jobs:
         run: |
           cp -r temp-repo/* .
 
+      - name: Generate unique branch name
+        id: generate_branch_name
+        run: echo "branch_name=sync-branch-$(date +%s)" >> $GITHUB_ENV
+
       - name: Commit and push changes
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'action@github.com'
-          git checkout -b sync-branch-$(date +%s)
+          git checkout -b ${{ env.branch_name }}
           git add .
           git commit -m "Sync changes from main server"
-          git push --set-upstream origin sync-branch-$(date +%s)
+          git push --set-upstream origin ${{ env.branch_name }}
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Sync changes from main server
-          branch: sync-branch-$(date +%s)
+          branch: ${{ env.branch_name }}
           title: "Sync changes from main server"
           body: "This PR syncs changes from the main server repository."
