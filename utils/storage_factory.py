@@ -155,6 +155,7 @@ def initialize_storage():
         # If we're using memory DB path, create a real file path for local storage
         if db_path.startswith("memory:"):
             try:
+                import tempfile
                 temp_dir = tempfile.mkdtemp()
                 db_path = os.path.join(temp_dir, "local_fallback.db")
                 logger.info(f"Using temporary file for local storage fallback: {db_path}")
