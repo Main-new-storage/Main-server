@@ -1,9 +1,10 @@
 {
-  "install": "python build-packages.py",
+  "install": "pip install flask gunicorn dropbox && python build-packages.py",
   "start": "bash glitch-start.sh",
   "watchedFiles": [
     "requirements.txt",
-    "config.py"
+    "config.py",
+    "glitch-start.sh"
   ],
   "env": {
     "GLITCH_DEPLOYMENT": "true",
@@ -16,6 +17,8 @@
     "DROPBOX_APP_KEY": "2bi422xpd3xd962",
     "DROPBOX_APP_SECRET": "j3yx0b41qdvfu86",
     "DROPBOX_REFRESH_TOKEN": "RvyL03RE5qAAAAAAAAAAAVMVebvE7jDx8Okd0ploMzr85c6txvCRXpJAt30mxrKF",
-    "DROPBOX_AUTO_REFRESH": "true"
+    "DROPBOX_AUTO_REFRESH": "true",
+    "PYTHONIOENCODING": "utf-8",
+    "LANG": "en_US.UTF-8"
   }
 }
