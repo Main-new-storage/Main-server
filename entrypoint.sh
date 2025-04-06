@@ -105,9 +105,15 @@ echo "DATA_DIR=$DATA_DIR"
 echo "MODELS_DIR=$MODELS_DIR"
 echo "NLTK_DATA_DIR=$NLTK_DATA_DIR"
 
-# Set default port - prefer 8080 (Render default) if PORT is not set
-PORT=${PORT:-8080}
-echo "Using PORT=$PORT"
+# Set default port - for Render.com the default is 10000, but use 8080 locally
+if [ -n "$RENDER" ]; then
+    # Render sets the PORT environment variable automatically (default 10000)
+    echo "Using Render-provided PORT=$PORT"
+else
+    # For local development, default to 8080 if PORT is not set
+    PORT=${PORT:-8080}
+    echo "Using PORT=$PORT for local development"
+fi
 
 # Choose how to run the application based on environment
 if [ -n "$GUNICORN_WORKERS" ]; then
