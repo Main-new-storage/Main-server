@@ -1700,5 +1700,12 @@ if __name__ == '__main__':
     
 # Only run the app directly when this file is executed, not when imported by Gunicorn
 if __name__ == '__main__':
-    # Start the Flask application
+    # Log port binding explicitly
+    logger.info(f"BINDING TO PORT: {config.PORT}")
+    print(f"STARTING SERVER ON PORT: {config.PORT}")
+    
+    # Start the Flask application - explicitly bind to all interfaces
     app.run(host='0.0.0.0', port=config.PORT, debug=False)
+    
+    # This should not be reached under normal operation
+    logger.error("Server unexpectedly stopped!")

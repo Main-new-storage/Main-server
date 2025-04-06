@@ -6,6 +6,8 @@ services:
     runtime: python  # Use Python runtime
     buildCommand: "python build-packages.py && chmod +x entrypoint.sh"
     startCommand: "gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --log-level info app:app"
+    # Explicitly tell Render which port to listen on (even though $PORT is already used)
+    port: 10000
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.11"  # Ensure compatibility with coremltools
