@@ -14,6 +14,7 @@ import zipfile
 import io
 from typing import List, Dict, Any, Optional, Tuple
 import nltk
+from dropbox.files import WriteMode
 
 import config
 
@@ -190,7 +191,7 @@ class NLTKResourceManager:
                     self.dropbox_storage.dbx.files_upload(
                         f.read(), 
                         dropbox_path,
-                        mode=self.dropbox_storage.dbx.files.WriteMode.overwrite
+                        mode=WriteMode.overwrite
                     )
                 
                 # Clean up temp file
@@ -222,7 +223,7 @@ class NLTKResourceManager:
                     self.dropbox_storage.dbx.files_upload(
                         f.read(), 
                         dropbox_path,
-                        mode=self.dropbox_storage.dbx.files.WriteMode.overwrite
+                        mode=WriteMode.overwrite
                     )
                 
                 logger.info(f"Uploaded file to Dropbox: {dropbox_path}")
@@ -317,6 +318,46 @@ class ZipFilePathPointer:
             self.zipfile.close()
 
 
+def ensure_nltk_folders(dbx):
+    """
+    Ensure NLTK data folders exist in Dropbox.
+    
+    Args:
+        dbx: Dropbox client instance
+        
+    Returns:
+        bool: True if folders were created or already exist
+    """
+    try:
+        # Create required folders
+        folders = [
+            "/nltk_data",
+            "/nltk_data/tokenizers",
+            "/nltk_data/corpora"
+        ]
+        
+        for folder in folders:
+            try:
+                # Check if folder exists
+                dbx.files_get_metadata(folder)
+                logger.debug(f"Folder already exists: {folder}")
+            except Exception:
+                # Create folder
+                try:
+                    dbx.files_create_folder_v2(folder)
+                    logger.info(f"Created folder in Dropbox: {folder}")
+                except Exception as e:
+                    # If folder already exists, this is fine
+                    if "path/conflict" in str(e):
+                        logger.debug(f"Folder already exists (conflict): {folder}")
+                    else:
+                        logger.warning(f"Could not create folder {folder}: {e}")
+        
+        return True
+    except Exception as e:
+        logger.error(f"Error ensuring NLTK folders: {e}")
+        return False
+
 def init_nltk_resources():
     """
     Initialize NLTK resources with automatic download and upload to Dropbox.
@@ -337,6 +378,9 @@ def init_nltk_resources():
             try:
                 dropbox_storage = get_dropbox_storage()
                 logger.info("Got Dropbox storage for NLTK resources")
+                
+                # Ensure NLTK folders exist
+                ensure_nltk_folders(dropbox_storage.dbx)
             except Exception as e:
                 logger.warning(f"Could not get Dropbox storage: {e}")
         
