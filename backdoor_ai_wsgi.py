@@ -25,8 +25,18 @@ if project_home not in sys.path:
     sys.path = [project_home] + sys.path
 
 try:
+    # Get port information
+    port = int(os.environ.get("PORT", 10000))
+    logger.info(f"WSGI APPLICATION CONFIGURED FOR PORT: {port}")
+    print(f"WSGI APPLICATION WILL BIND TO PORT: {port}")
+    
+    # Import Flask app
     from app import app as application
     logger.info("Successfully imported Flask application")
+    
+    # Log port binding for debugging
+    logger.info(f"Flask application is configured and ready to listen on port {port}")
+    print(f"FLASK APPLICATION READY TO LISTEN ON PORT: {port}")
 except Exception as e:
     logger.error(f"Failed to import Flask application: {e}")
     raise

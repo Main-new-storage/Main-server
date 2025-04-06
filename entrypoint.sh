@@ -118,11 +118,40 @@ fi
 # Choose how to run the application based on environment
 if [ -n "$GUNICORN_WORKERS" ]; then
     echo "Starting application with Gunicorn on port $PORT..."
+    echo "BINDING TO PORT: $PORT"
+    
+    # Check if PORT is set
+    if [ -z "$PORT" ]; then
+        # Default to 10000 if PORT is not set
+        export PORT=10000
+        echo "PORT was not set! Using default port: $PORT"
+    fi
+    
+    # Make the port binding very explicit before starting
+    echo "APPLICATION WILL LISTEN ON: 0.0.0.0:$PORT"
+    
+    # Check for open ports
+    netstat -tulpn 2>/dev/null || echo "netstat command not available"
+    
     # Add timeout to prevent gunicorn worker timeouts
     exec gunicorn --bind 0.0.0.0:$PORT --workers ${GUNICORN_WORKERS:-2} --timeout 120 --log-level info "app:app"
 else
     echo "Starting application with Flask development server on port $PORT..."
+    echo "BINDING TO PORT: $PORT"
+    
+    # Check if PORT is set
+    if [ -z "$PORT" ]; then
+        # Default to 8080 if PORT is not set
+        export PORT=8080
+        echo "PORT was not set! Using default port: $PORT"
+    fi
+    
     # Ensure Flask uses the right port
     export FLASK_RUN_PORT=$PORT
+    echo "APPLICATION WILL LISTEN ON: 0.0.0.0:$PORT"
+    
+    # Add a debug command to check for free ports
+    netstat -tulpn 2>/dev/null || echo "netstat command not available"
+    
     exec python app.py
 fi
