@@ -701,8 +701,23 @@ class DropboxStorage:
                 # Update model files map
                 self.model_files[model_name] = dropbox_path
                 
-                # Create shared link for the file
-                shared_link = self.dbx.sharing_create_shared_link_with_settings(dropbox_path)
+                # Check for existing shared link or create a new one
+                try:
+                    # List existing shared links for this path
+                    links = self.dbx.sharing_list_shared_links(path=dropbox_path)
+                    
+                    # If links exist, use the first one
+                    if links and len(links.links) > 0:
+                        shared_link = links.links[0]
+                        logger.info(f"Using existing shared link for uploaded model {model_name}")
+                    else:
+                        # Create shared link for the file
+                        shared_link = self.dbx.sharing_create_shared_link_with_settings(dropbox_path)
+                        logger.info(f"Created new shared link for uploaded model {model_name}")
+                except Exception as e:
+                    # If checking for existing links fails, try to create new link as fallback
+                    logger.warning(f"Error checking for existing shared links: {e}")
+                    shared_link = self.dbx.sharing_create_shared_link_with_settings(dropbox_path)
                 
                 # Convert shared link to direct download link
                 download_url = shared_link.url.replace('?dl=0', '?dl=1')
@@ -779,8 +794,23 @@ class DropboxStorage:
                     return {'success': False, 'error': 'Model not found'}
             
             try:
-                # Create shared link for direct download
-                shared_link = self.dbx.sharing_create_shared_link_with_settings(dropbox_path)
+                # First check if a shared link already exists
+                try:
+                    # List existing shared links for this path
+                    links = self.dbx.sharing_list_shared_links(path=dropbox_path)
+                    
+                    # If links exist, use the first one
+                    if links and len(links.links) > 0:
+                        shared_link = links.links[0]
+                        logger.info(f"Using existing shared link for {model_name}")
+                    else:
+                        # Create new shared link for direct download
+                        shared_link = self.dbx.sharing_create_shared_link_with_settings(dropbox_path)
+                        logger.info(f"Created new shared link for {model_name}")
+                except Exception as e:
+                    logger.warning(f"Error checking for existing shared links: {e}")
+                    # Try creating new link as fallback
+                    shared_link = self.dbx.sharing_create_shared_link_with_settings(dropbox_path)
                 
                 # Convert to direct download link
                 download_url = shared_link.url.replace('?dl=0', '?dl=1')
@@ -923,7 +953,25 @@ class DropboxStorage:
                 for name, path in self.model_files.items():
                     try:
                         metadata = self.dbx.files_get_metadata(path)
-                        shared_link = self.dbx.sharing_create_shared_link_with_settings(path)
+                        
+                        # Check for existing shared link or create a new one
+                        try:
+                            # List existing shared links for this path
+                            links = self.dbx.sharing_list_shared_links(path=path)
+                            
+                            # If links exist, use the first one
+                            if links and len(links.links) > 0:
+                                shared_link = links.links[0]
+                                logger.info(f"Using existing shared link for model listing: {name}")
+                            else:
+                                # Create shared link for the file
+                                shared_link = self.dbx.sharing_create_shared_link_with_settings(path)
+                                logger.info(f"Created new shared link for model listing: {name}")
+                        except Exception as e:
+                            # If checking fails, try to create new link as fallback
+                            logger.warning(f"Error checking for existing shared links for {name}: {e}")
+                            shared_link = self.dbx.sharing_create_shared_link_with_settings(path)
+                            
                         download_url = shared_link.url.replace('?dl=0', '?dl=1')
                         
                         models.append({

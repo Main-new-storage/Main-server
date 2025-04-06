@@ -686,18 +686,31 @@ def get_model(version):
     try:
         # If this is the base model version, serve from memory cache
         if version == '1.0.0':
-            from utils.model_download import get_base_model_buffer
-            model_buffer = get_base_model_buffer()
-            
-            if model_buffer:
-                logger.info(f"Serving base model version {version} from memory")
-                model_buffer.seek(0)  # Ensure we're at the beginning of the buffer
-                return send_file(
-                    model_buffer,
-                    mimetype='application/octet-stream',
-                    as_attachment=True,
-                    download_name=f"model_{version}.mlmodel"
-                )
+                # Try to use the memory-efficient approach first
+                try:
+                    from utils.memory_efficient_model import get_model_url
+                    model_url = get_model_url(f"model_{version}.mlmodel")
+                    
+                    if model_url:
+                        logger.info(f"Redirecting to efficient stream URL for model {version}")
+                        return redirect(model_url)
+                except ImportError:
+                    logger.warning("Memory-efficient model utilities not available, using fallback")
+                    pass
+                
+                # Fallback to old approach if needed
+                from utils.model_download import get_base_model_buffer
+                model_buffer = get_base_model_buffer()
+                
+                if model_buffer:
+                    logger.info(f"Serving base model version {version} from memory")
+                    model_buffer.seek(0)  # Ensure we're at the beginning of the buffer
+                    return send_file(
+                        model_buffer,
+                        mimetype='application/octet-stream',
+                        as_attachment=True,
+                        download_name=f"model_{version}.mlmodel"
+                    )
         
         # For other versions, get streaming URL from Dropbox
         if config.DROPBOX_ENABLED:
