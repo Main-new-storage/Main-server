@@ -1,0 +1,20 @@
+# Example render.yaml with port binding
+services:
+  - type: web
+    name: backdoor-ai
+    env: python
+    plan: free
+    runtime: python
+    buildCommand: "python build-packages.py && chmod +x entrypoint.sh"
+    # Do not use startCommand with a Procfile
+    # startCommand: "./entrypoint.sh"  
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: RENDER
+        value: "true"
+      - key: DROPBOX_ENABLED
+        value: "true"
+      - key: PORT
+        value: "8080"
+      # Other environment variables...
