@@ -252,6 +252,69 @@ try:
                             logger.info("Updated base model metadata in database")
                     except Exception as e:
                         logger.error(f"Error updating model metadata in database: {e}")
+                    
+                    # Run comprehensive testing with real data from Dropbox
+                    logger.info("Starting comprehensive model testing with real data from Dropbox")
+                    try:
+                        # Launch the test in a separate thread to not block app startup
+                        def run_comprehensive_test():
+                            try:
+                                from utils.model_tester import comprehensive_base_model_test
+                                test_results = comprehensive_base_model_test()
+                                
+                                if test_results.get('success', False):
+                                    # Get accuracy from the results
+                                    accuracy = test_results.get('performance_testing', {}).get('stats', {}).get('accuracy', 0)
+                                    samples = test_results.get('performance_testing', {}).get('stats', {}).get('total_samples', 0)
+                                    logger.info(f"✅ Model testing successful with {accuracy:.2f} accuracy on {samples} real data samples")
+                                    
+                                    # Store test results in database
+                                    try:
+                                        with get_connection(config.DB_PATH) as conn:
+                                            cursor = conn.cursor()
+                                            # Add a test_results column if it doesn't exist
+                                            try:
+                                                cursor.execute("SELECT test_results FROM model_versions WHERE version = '1.0.0'")
+                                            except sqlite3.OperationalError:
+                                                cursor.execute("ALTER TABLE model_versions ADD COLUMN test_results TEXT")
+                                            
+                                            # Convert test results to JSON
+                                            test_json = json.dumps({
+                                                'accuracy': accuracy,
+                                                'samples': samples,
+                                                'timestamp': datetime.now().isoformat(),
+                                                'success': True
+                                            })
+                                            
+                                            # Update test results
+                                            cursor.execute("""
+                                                UPDATE model_versions
+                                                SET test_results = ?
+                                                WHERE version = '1.0.0'
+                                            """, (test_json,))
+                                            conn.commit()
+                                            logger.info("Updated base model test results in database")
+                                    except Exception as e:
+                                        logger.error(f"Error updating test results in database: {e}")
+                                else:
+                                    # Log errors and warnings
+                                    logger.warning("❌ Model testing had issues!")
+                                    for error in test_results.get('errors', []):
+                                        logger.error(f"Testing error: {error}")
+                                    for warning in test_results.get('warnings', []):
+                                        logger.warning(f"Testing warning: {warning}")
+                            except Exception as e:
+                                logger.error(f"Error in comprehensive model testing: {e}")
+                        
+                        # Start testing in a background thread
+                        logger.info("Launching comprehensive model testing in background thread")
+                        import threading
+                        test_thread = threading.Thread(target=run_comprehensive_test)
+                        test_thread.daemon = True
+                        test_thread.start()
+                        
+                    except Exception as e:
+                        logger.error(f"Error starting comprehensive model testing: {e}")
                 else:
                     logger.warning("Base model validation failed!")
                     if validation_results.get('errors'):
