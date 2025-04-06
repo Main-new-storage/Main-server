@@ -90,9 +90,9 @@ echo "PORT=${PORT:-10000}"
 
 # Choose how to run the application based on environment
 if [ -n "$GUNICORN_WORKERS" ]; then
-    echo "Starting application with Gunicorn..."
-    exec gunicorn --bind 0.0.0.0:${PORT:-10000} --workers ${GUNICORN_WORKERS:-2} "app:app"
+    echo "Starting application with Gunicorn on port 10000..."
+    exec gunicorn --bind 0.0.0.0:10000 --workers ${GUNICORN_WORKERS:-2} "app:app"
 else
-    echo "Starting application with Flask development server..."
+    echo "Starting application with Flask development server on port 10000..."
     exec python app.py
 fi
