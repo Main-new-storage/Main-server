@@ -390,6 +390,17 @@ try:
             logger.error(f"Failed to ensure user_data folder exists: {e}")
 except Exception as e:
     logger.error(f"Error checking base model: {e}")
+# Set up automatic training trigger on app deployment
+try:
+    from auto_training_setup import setup_training_on_deploy, check_training_status
+    
+    # Schedule training to start after app initialization
+    setup_training_on_deploy(delay_seconds=45)
+    logger.info("Automatic training has been scheduled for post-deployment")
+except Exception as e:
+    logger.error(f"Failed to set up automatic training: {e}")
+    logger.warning("App will continue without automatic training. You can manually trigger training.")
+
 # =============================================================================
 # API Endpoints
 # =============================================================================
@@ -513,6 +524,95 @@ def upload_model():
         logger.error(f"Error uploading model: {e}")
         return jsonify({'success': False, 'message': f'Error: {e}'}), 500
 
+@app.route('/api/ai/training/status', methods=['GET'])
+def training_status():
+    """
+    API endpoint to check the status of the current training job
+    """
+    try:
+        from auto_training_setup import check_training_status
+        
+        # Get training status
+        status_data = check_training_status()
+        
+        if not status_data:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to retrieve training status',
+                'status': 'unknown'
+            }), 500
+            
+        # Extract jobs and sort by most recent first
+        jobs = status_data.get('jobs', [])
+        
+        if not jobs:
+            return jsonify({
+                'success': True,
+                'message': 'No training jobs found',
+                'status': 'none',
+                'jobs': []
+            })
+        
+        # Get most recent job
+        latest_job = jobs[0] if jobs else None
+        
+        # Format response
+        response = {
+            'success': True,
+            'message': f"Found {len(jobs)} training jobs",
+            'status': latest_job.get('status', 'unknown') if latest_job else 'none',
+            'latestJob': latest_job,
+            'allJobs': jobs[:5]  # Only send the 5 most recent jobs
+        }
+        
+        # Include model information if available
+        if latest_job and 'model_info' in latest_job:
+            response['modelInfo'] = latest_job['model_info']
+            
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"Error checking training status: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}',
+            'status': 'error'
+        }), 500
+
+@app.route('/api/ai/training/trigger', methods=['POST'])
+def trigger_training():
+    """
+    API endpoint to manually trigger training
+    """
+    try:
+        # Get request parameters
+        data = request.json or {}
+        reason = data.get('reason', 'api_request')
+        force = data.get('force', False)
+        
+        # Import and call the trigger function
+        from app_trigger_training import create_trigger_file
+        success = create_trigger_file(reason=reason, force=force)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Training triggered successfully with reason: {reason}',
+                'force': force
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to trigger training'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error triggering training: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+
 @app.route('/api/ai/models/<version>', methods=['GET'])
 def get_model(version):
     """
@@ -623,6 +723,165 @@ def latest_model():
         'latestModelVersion': model_info['version'],
         'modelDownloadURL': f"https://{request.host}/api/ai/models/{model_info['version']}"
     })
+
+@app.route('/admin/training', methods=['GET'])
+def training_admin_page():
+    """
+    Admin page for monitoring and controlling model training
+    """
+    try:
+        # Get training status
+        from auto_training_setup import check_training_status
+        status_data = check_training_status() or {'jobs': []}
+        
+        # Get current model version
+        current_model = get_latest_model_info()
+        
+        # HTML template for admin page
+        html_template = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Backdoor AI Training Admin</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.6; }
+                h1, h2, h3 { color: #333; }
+                .container { max-width: 1000px; margin: 0 auto; }
+                .card { background: #fff; border-radius: 5px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                .status { display: inline-block; padding: 5px 10px; border-radius: 3px; font-weight: bold; }
+                .pending { background: #fff3cd; color: #856404; }
+                .processing, .training { background: #cce5ff; color: #004085; }
+                .completed { background: #d4edda; color: #155724; }
+                .failed { background: #f8d7da; color: #721c24; }
+                .unknown { background: #e2e3e5; color: #383d41; }
+                button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+                .trigger-btn { background: #007bff; color: white; }
+                .trigger-btn:hover { background: #0069d9; }
+                .force-cb { margin-left: 10px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+                th { background-color: #f8f9fa; }
+                tr:hover { background-color: #f1f1f1; }
+                .refresh-link { display: inline-block; margin-top: 20px; color: #007bff; text-decoration: none; }
+                .refresh-link:hover { text-decoration: underline; }
+                .code { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Backdoor AI Training Admin</h1>
+                
+                <div class="card">
+                    <h2>Current Model</h2>
+                    <p><strong>Version:</strong> {{ current_model.version }}</p>
+                    <p><strong>Accuracy:</strong> {{ current_model.accuracy|float|round(4) }}</p>
+                    <p><strong>Training Data Size:</strong> {{ current_model.training_data_size }}</p>
+                    <p><strong>Training Date:</strong> {{ current_model.training_date }}</p>
+                </div>
+                
+                <div class="card">
+                    <h2>Training Status</h2>
+                    {% if jobs %}
+                        <p>Latest Job Status: <span class="status {{ jobs[0].status }}">{{ jobs[0].status|upper }}</span></p>
+                        {% if jobs[0].status == 'completed' and jobs[0].model_info %}
+                            <p><strong>Model Version:</strong> {{ jobs[0].model_info.version }}</p>
+                            <p><strong>Accuracy:</strong> {{ jobs[0].model_info.accuracy|float|round(4) }}</p>
+                        {% endif %}
+                        {% if jobs[0].message %}
+                            <p><strong>Message:</strong> {{ jobs[0].message }}</p>
+                        {% endif %}
+                    {% else %}
+                        <p>No training jobs found</p>
+                    {% endif %}
+                    
+                    <h3>Trigger New Training</h3>
+                    <div>
+                        <input type="text" id="reason" placeholder="Reason for training" value="manual_admin_trigger" style="padding:8px; width:250px;">
+                        <label for="force" class="force-cb"><input type="checkbox" id="force"> Force training</label>
+                        <button class="trigger-btn" onclick="triggerTraining()">Start Training</button>
+                    </div>
+                    <div id="triggerResult" style="margin-top:10px;"></div>
+                </div>
+                
+                <div class="card">
+                    <h2>Recent Training Jobs</h2>
+                    {% if jobs %}
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Reason</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in jobs %}
+                                <tr>
+                                    <td><span class="status {{ job.status }}">{{ job.status|upper }}</span></td>
+                                    <td>{{ job.created_at }}</td>
+                                    <td>{{ job.reason }}</td>
+                                    <td>{{ job.message or '' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No training jobs found</p>
+                    {% endif %}
+                </div>
+                
+                <a href="javascript:location.reload()" class="refresh-link">Refresh Status</a>
+            </div>
+            
+            <script>
+                function triggerTraining() {
+                    const reason = document.getElementById('reason').value || 'manual_admin_trigger';
+                    const force = document.getElementById('force').checked;
+                    const resultDiv = document.getElementById('triggerResult');
+                    
+                    resultDiv.innerHTML = 'Triggering training...';
+                    
+                    fetch('/api/ai/training/trigger', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            reason: reason,
+                            force: force
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            resultDiv.innerHTML = `<div style="color:green">${data.message}</div>`;
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            resultDiv.innerHTML = `<div style="color:red">Error: ${data.message}</div>`;
+                        }
+                    })
+                    .catch(err => {
+                        resultDiv.innerHTML = `<div style="color:red">Error: ${err.message}</div>`;
+                    });
+                }
+            </script>
+        </body>
+        </html>
+        """
+        
+        # Render the template with data
+        from flask import render_template_string
+        return render_template_string(
+            html_template, 
+            current_model=current_model,
+            jobs=status_data.get('jobs', [])
+        )
+        
+    except Exception as e:
+        logger.error(f"Error rendering training admin page: {e}")
+        return f"<h1>Error</h1><p>Failed to load admin page: {str(e)}</p>"
 
 @app.route('/api/ai/stats', methods=['GET'])
 def get_stats():
