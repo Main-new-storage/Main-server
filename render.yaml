@@ -37,7 +37,3 @@ services:
       - key: PIP_ONLY_BINARY
         value: "numpy,scipy,scikit-learn,pandas"
     # Use persistent disk for data storage, but with a different path
-    disk:
-      name: backdoor-ai-data
-      mountPath: /app/disk  # Move to /app/disk which should be writable
-      sizeGB: 1
