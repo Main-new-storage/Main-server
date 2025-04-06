@@ -3,7 +3,7 @@ services:
     name: backdoor-ai
     env: docker
     region: ohio  # Choose the region closest to you
-    plan: starter  # Use 'starter' for sufficient resources to build scientific packages
+    plan: free  # Use 'starter' for sufficient resources to build scientific packages
     # Docker will use the Dockerfile in the repository root
     # Using entrypoint.sh to start server with explicit port 10000
     envVars:
