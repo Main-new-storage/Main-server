@@ -1698,5 +1698,7 @@ if __name__ == '__main__':
     logger.info(f"Data directory: {config.BASE_DIR}")
     logger.info(f"Model directory: {config.MODEL_DIR}")
     
+# Only run the app directly when this file is executed, not when imported by Gunicorn
+if __name__ == '__main__':
     # Start the Flask application
     app.run(host='0.0.0.0', port=config.PORT, debug=False)
