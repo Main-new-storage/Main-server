@@ -16,14 +16,33 @@ logger = logging.getLogger(__name__)
 def ensure_nltk_resources() -> None:
     """
     Ensures required NLTK resources are available, downloading them if needed.
+    
+    This function attempts to use the enhanced NLTK resource manager if available,
+    which adds Dropbox integration and better error handling.
     """
     try:
+        # Try to use the enhanced resource manager
+        try:
+            from utils.nltk_resources import init_nltk_resources
+            success = init_nltk_resources()
+            if success:
+                logger.info("NLTK resources initialized with enhanced manager")
+                return
+            else:
+                logger.warning("Enhanced NLTK resource initialization failed, falling back to basic approach")
+        except ImportError:
+            # Enhanced manager not available, use basic approach
+            pass
+            
+        # Fall back to basic approach
         for resource in ['punkt', 'stopwords', 'wordnet']:
             try:
                 nltk.data.find(f'tokenizers/{resource}')
             except LookupError:
                 logger.info(f"Downloading NLTK resource: {resource}")
                 nltk.download(resource, quiet=True)
+                
+        logger.info("NLTK resources initialized with basic approach")
     except Exception as e:
         logger.warning(f"Failed to ensure NLTK resources: {e}")
 
