@@ -6,8 +6,8 @@ services:
     plan: free
     runtime: python
     buildCommand: "python build-packages.py && chmod +x entrypoint.sh"
-    # Do not use startCommand with a Procfile
-    # startCommand: "./entrypoint.sh"  
+    # IMPORTANT: For Render's Python runtime, startCommand is required even with Procfile
+    startCommand: "gunicorn --bind 0.0.0.0:8080 --workers 2 --timeout 120 --log-level info app:app"
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.11"
