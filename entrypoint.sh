@@ -3,7 +3,7 @@ set -e
 
 echo "Starting Backdoor AI Learning Server..."
 
-# Operating in memory-only mode with no local storage on cloud platforms
+# Operating in memory-only mode with no local storage on Render
 echo "Setting up memory-only operation mode..."
 
 if [ -n "$RENDER" ]; then
@@ -15,29 +15,11 @@ if [ -n "$RENDER" ]; then
     
     # No directories needed - everything will stream from Dropbox
     echo "No local directories needed - running in pure memory mode"
-elif [ -n "$CIRCLECI" ] || [ -n "$CIRCLECI_ENV" ]; then
-    echo "Running on CircleCI platform - using memory-only mode"
-    # Set environment variables to signal memory-only mode
-    export MEMORY_ONLY_MODE="True"
-    export NO_LOCAL_STORAGE="True"
-    export USE_DROPBOX_STREAMING="True"
-    
-    # No directories needed - everything will stream from Dropbox
-    echo "No local directories needed - running in pure memory mode for CircleCI"
 elif [ -n "$KOYEB_DEPLOYMENT" ]; then
     echo "Running on Koyeb platform - using memory-only mode"
     # Set environment variables to signal memory-only mode
     export MEMORY_ONLY_MODE="True"
     export USE_DROPBOX_STREAMING="True"
-elif [ -n "$GLITCH_DEPLOYMENT" ]; then
-    echo "Running on Glitch.com platform - using memory-only mode"
-    # Set environment variables to signal memory-only mode
-    export MEMORY_ONLY_MODE="True"
-    export NO_LOCAL_STORAGE="True"
-    export USE_DROPBOX_STREAMING="True"
-    
-    # No directories needed - everything will stream from Dropbox
-    echo "No local directories needed - running in pure memory mode for Glitch"
 else
     echo "Running in local/custom environment"
     # In local environment, use directories in current directory
@@ -104,54 +86,13 @@ echo "Environment summary:"
 echo "DATA_DIR=$DATA_DIR"
 echo "MODELS_DIR=$MODELS_DIR"
 echo "NLTK_DATA_DIR=$NLTK_DATA_DIR"
-
-# Set default port - for Render.com the default is 10000, but use 8080 locally
-if [ -n "$RENDER" ]; then
-    # Render sets the PORT environment variable automatically (default 10000)
-    echo "Using Render-provided PORT=$PORT"
-else
-    # For local development, default to 8080 if PORT is not set
-    PORT=${PORT:-8080}
-    echo "Using PORT=$PORT for local development"
-fi
+echo "PORT=${PORT:-10000}"
 
 # Choose how to run the application based on environment
 if [ -n "$GUNICORN_WORKERS" ]; then
-    echo "Starting application with Gunicorn on port $PORT..."
-    echo "BINDING TO PORT: $PORT"
-    
-    # Check if PORT is set
-    if [ -z "$PORT" ]; then
-        # Default to 10000 if PORT is not set
-        export PORT=10000
-        echo "PORT was not set! Using default port: $PORT"
-    fi
-    
-    # Make the port binding very explicit before starting
-    echo "APPLICATION WILL LISTEN ON: 0.0.0.0:$PORT"
-    
-    # Check for open ports
-    netstat -tulpn 2>/dev/null || echo "netstat command not available"
-    
-    # Add timeout to prevent gunicorn worker timeouts
-    exec gunicorn --bind 0.0.0.0:$PORT --workers ${GUNICORN_WORKERS:-2} --timeout 120 --log-level info "app:app"
+    echo "Starting application with Gunicorn..."
+    exec gunicorn --bind 0.0.0.0:${PORT:-10000} --workers ${GUNICORN_WORKERS:-2} "app:app"
 else
-    echo "Starting application with Flask development server on port $PORT..."
-    echo "BINDING TO PORT: $PORT"
-    
-    # Check if PORT is set
-    if [ -z "$PORT" ]; then
-        # Default to 8080 if PORT is not set
-        export PORT=10000
-        echo "PORT was not set! Using default port: $PORT"
-    fi
-    
-    # Ensure Flask uses the right port
-    export FLASK_RUN_PORT=$PORT
-    echo "APPLICATION WILL LISTEN ON: 0.0.0.0:$PORT"
-    
-    # Add a debug command to check for free ports
-    netstat -tulpn 2>/dev/null || echo "netstat command not available"
-    
+    echo "Starting application with Flask development server..."
     exec python app.py
 fi
