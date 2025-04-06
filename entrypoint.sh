@@ -104,13 +104,19 @@ echo "Environment summary:"
 echo "DATA_DIR=$DATA_DIR"
 echo "MODELS_DIR=$MODELS_DIR"
 echo "NLTK_DATA_DIR=$NLTK_DATA_DIR"
-echo "PORT=${PORT:-10000}"
+
+# Set default port - prefer 8080 (Render default) if PORT is not set
+PORT=${PORT:-8080}
+echo "Using PORT=$PORT"
 
 # Choose how to run the application based on environment
 if [ -n "$GUNICORN_WORKERS" ]; then
-    echo "Starting application with Gunicorn..."
-    exec gunicorn --bind 0.0.0.0:${PORT:-10000} --workers ${GUNICORN_WORKERS:-2} "app:app"
+    echo "Starting application with Gunicorn on port $PORT..."
+    # Add timeout to prevent gunicorn worker timeouts
+    exec gunicorn --bind 0.0.0.0:$PORT --workers ${GUNICORN_WORKERS:-2} --timeout 120 --log-level info "app:app"
 else
-    echo "Starting application with Flask development server..."
+    echo "Starting application with Flask development server on port $PORT..."
+    # Ensure Flask uses the right port
+    export FLASK_RUN_PORT=$PORT
     exec python app.py
 fi

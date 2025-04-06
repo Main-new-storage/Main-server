@@ -2,23 +2,19 @@ services:
   - type: web
     name: backdoor-ai
     env: python
-    plan: free  # Use 'starter' for sufficient resources to build scientific packages
-    runtime: python  # Use Python runtime
-    buildCommand: "python build-packages.py && chmod +x entrypoint.sh"
-    startCommand: "./entrypoint.sh"
+    region: ohio  # Choose the region closest to you
+    plan: starter  # Adjust as needed for memory/CPU
+    buildCommand: pip install --prefer-binary numpy==1.24.4 scipy==1.10.1 scikit-learn==1.1.3 && pip install -r requirements.txt
+    startCommand: ./entrypoint.sh
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.11.11"  # Ensure compatibility with coremltools
-      - key: RENDER
+      - key: PYTHONUNBUFFERED
         value: "true"
+      - key: MEMORY_ONLY_MODE
+        value: "true"  # Use memory-only mode to avoid disk usage
       - key: DROPBOX_ENABLED
-        value: "true"
+        value: "true"  # Use Dropbox for storage
       - key: PORT
-        value: "8080"  # Explicitly set port for Render to detect
-      - key: STORAGE_MODE
-        value: "dropbox"
-      - key: MEMORY_OPTIMIZED
-        value: "true"
+        value: "8080" # Explicit port binding for Render
       - key: DROPBOX_DB_FILENAME
         value: "backdoor_ai_db.db"
       - key: DROPBOX_MODELS_FOLDER

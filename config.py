@@ -140,8 +140,8 @@ logger.info(f"Using DATA_DIR: {DATA_DIR}")
 logger.info(f"Using MODEL_DIR: {MODEL_DIR}")
 logger.info(f"Using NLTK_DATA_PATH: {NLTK_DATA_PATH}")
 
-# Server settings
-PORT = int(os.getenv("PORT", 10000))
+# Server settings - Use port 8080 as default for cloud providers like Render
+PORT = int(os.getenv("PORT", 8080))
 
 # Handle storage setup based on DROPBOX_ENABLED flag
 if DROPBOX_ENABLED:

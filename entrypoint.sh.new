@@ -1,0 +1,94 @@
+#!/bin/bash
+set -e
+
+# Set default directories using environment variables if available
+DATA_DIR=${DATA_DIR:-"/app/data"}
+MODELS_DIR=${MODELS_DIR:-"/app/models"}
+NLTK_DATA_DIR=${NLTK_DATA_DIR:-"/app/nltk_data"}
+
+# Ensure directories exist
+mkdir -p "$DATA_DIR"
+mkdir -p "$MODELS_DIR"
+mkdir -p "$NLTK_DATA_DIR"
+
+# Create empty DB if needed
+if [ "$DROPBOX_ENABLED" != "true" ]; then
+    if [ ! -f "$DATA_DIR/backdoor_ai.db" ]; then
+        echo "Creating empty database..."
+        touch "$DATA_DIR/backdoor_ai.db"
+    fi
+fi
+
+# Add nltk_data to path
+export NLTK_DATA=$NLTK_DATA_DIR
+
+# Set up Python path
+export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+# Refresh Dropbox OAuth tokens if env vars are available
+if [ "$DROPBOX_ENABLED" = "true" ]; then
+    echo "Running token refresh..."
+    
+    # Try the auto refresh script first
+    if [ -f "refresh_token_auto.py" ]; then
+        echo "Using automatic token refresh"
+        python refresh_token_auto.py || echo "Auto refresh failed, continuing anyway"
+    elif [ -f "refresh_token.py" ]; then
+        echo "Using manual token refresh"
+        if [ -n "$DROPBOX_REFRESH_TOKEN" ] && [ -n "$DROPBOX_APP_KEY" ] && [ -n "$DROPBOX_APP_SECRET" ]; then
+            echo "Refreshing token with provided credentials"
+            python refresh_token.py --refresh_token "$DROPBOX_REFRESH_TOKEN" --app_key "$DROPBOX_APP_KEY" --app_secret "$DROPBOX_APP_SECRET" --headless || echo "Python token refresh failed, continuing anyway"
+        else
+            echo "Missing required environment variables for token refresh"
+        fi
+    elif [ -f "refresh_dropbox_token.sh" ]; then
+        echo "Using shell script token refresh"
+        ./refresh_dropbox_token.sh || echo "Shell token refresh failed, continuing anyway"
+    else
+        echo "Token refresh scripts not found, skipping"
+    fi
+fi
+
+# Fix for libcoremlpython issues
+if [ ! -f "$(python -c 'import os; import coremltools; print(os.path.dirname(coremltools.__file__) + "/libcoremlpython.py")')" ]; then
+    echo "Creating mock libcoremlpython.py to fix coremltools issues..."
+    COREMLTOOLS_DIR=$(python -c 'import os; import coremltools; print(os.path.dirname(coremltools.__file__))')
+    cat > "$COREMLTOOLS_DIR/libcoremlpython.py" << EOF
+class MockProxy:
+    def __init__(self, *args, **kwargs):
+        pass
+        
+    def __getattr__(self, name):
+        def mock_method(*args, **kwargs):
+            return None
+        return mock_method
+
+# Create mock proxies
+_MLModelProxy = MockProxy
+_MLComputePlanProxy = MockProxy
+_MLModelAssetProxy = MockProxy
+_MLCPUComputeDeviceProxy = MockProxy
+_MLGPUComputeDeviceProxy = MockProxy
+_MLNeuralEngineComputeDeviceProxy = MockProxy
+EOF
+    echo "Created mock libcoremlpython.py at $COREMLTOOLS_DIR/libcoremlpython.py"
+fi
+
+# Display summary of environment
+echo "Environment summary:"
+echo "DATA_DIR=$DATA_DIR"
+echo "MODELS_DIR=$MODELS_DIR"
+echo "NLTK_DATA_DIR=$NLTK_DATA_DIR"
+
+# Set default port - if PORT is not set, prefer 8080 (Render default) then 10000 (our default)
+PORT=${PORT:-8080}
+echo "Using PORT=$PORT"
+
+# Choose how to run the application based on environment
+if [ -n "$GUNICORN_WORKERS" ]; then
+    echo "Starting application with Gunicorn..."
+    exec gunicorn --bind 0.0.0.0:$PORT --workers ${GUNICORN_WORKERS:-2} --timeout 120 "app:app"
+else
+    echo "Starting application with Flask development server..."
+    exec python app.py
+fi
