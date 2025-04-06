@@ -142,7 +142,7 @@ else
     # Check if PORT is set
     if [ -z "$PORT" ]; then
         # Default to 8080 if PORT is not set
-        export PORT=8080
+        export PORT=10000
         echo "PORT was not set! Using default port: $PORT"
     fi
     
