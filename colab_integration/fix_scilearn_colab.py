@@ -62,7 +62,7 @@ def fix_notebook():
         # Also add a verification cell
         verification_cell = {
             "cell_type": "code",
-            "execution_count": None,
+            "execution_count": null,
             "metadata": {},
             "source": [
                 "# Check installed package versions to verify everything is compatible\n",
