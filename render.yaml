@@ -5,7 +5,6 @@ services:
     plan: free  # Use 'starter' for sufficient resources to build scientific packages
     runtime: python  # Use Python runtime
     buildCommand: "python build-packages.py && chmod +x entrypoint.sh"
-    startCommand: "./entrypoint.sh"
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.11"  # Ensure compatibility with coremltools
